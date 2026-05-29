@@ -64,9 +64,78 @@ delay_var = tk.IntVar(value=3)
 delay_spin = ttk.Spinbox(frame, from_=1, to=30, textvariable=delay_var, width=5)
 delay_spin.grid(row=3, column=1, sticky="w", padx=(4, 0), pady=(6, 0))
 
-# Run button
-run_btn = ttk.Button(frame, text="Run Macro", command=run_macro)
-run_btn.grid(row=4, column=0, columnspan=2, pady=(10, 4))
+def apply_drop_ships():
+    raw = text_input.get("1.0", tk.END)
+    lines = [line.rstrip() for line in raw.splitlines()]
+
+    # Extract order number
+    order_num = ""
+    for line in lines:
+        if line.startswith("Order #"):
+            order_num = line.replace("Order #", "").strip()
+            break
+
+    # Extract customer name (first non-empty line after "Ship To Address")
+    customer = ""
+    for i, line in enumerate(lines):
+        if line.strip() == "Ship To Address":
+            for k in range(i + 1, len(lines)):
+                if lines[k].strip():
+                    customer = lines[k].strip()
+                    break
+            break
+
+    results = []
+    if order_num or customer:
+        results.append(f"PO: {order_num} | Customer: {customer}")
+        results.append("")
+
+    for i, line in enumerate(lines):
+        if line.startswith("SKU:"):
+            sku = line[4:].strip()
+            if "_" in sku:
+                sku = sku.split("_", 1)[1]
+            title = lines[i - 1].strip() if i > 0 else ""
+            qty = ""
+            for j in range(i + 1, len(lines)):
+                if lines[j].startswith("$"):
+                    for k in range(j + 1, len(lines)):
+                        if lines[k].strip():
+                            qty = lines[k].strip()
+                            break
+                    break
+            results.append(f"Qty: {qty} - SKU: {sku} | Item: {title}")
+
+    text_input.delete("1.0", tk.END)
+    text_input.insert("1.0", "\n".join(results))
+
+def apply_sg():
+    raw = text_input.get("1.0", tk.END)
+    lines = raw.splitlines()
+    result = []
+    for line in lines:
+        if "\t" in line:
+            parts = line.split("\t")
+            if len(parts) >= 2 and not parts[1].startswith("SG"):
+                parts[1] = "SG" + parts[1]
+            result.append("\t".join(parts))
+        else:
+            result.append(line)
+    text_input.delete("1.0", tk.END)
+    text_input.insert("1.0", "\n".join(result))
+
+# Buttons row
+btn_frame = ttk.Frame(frame)
+btn_frame.grid(row=4, column=0, columnspan=2, pady=(10, 4))
+
+drop_ships_btn = ttk.Button(btn_frame, text="Drop Ships", command=apply_drop_ships)
+drop_ships_btn.pack(side=tk.LEFT, padx=(0, 8))
+
+sg_btn = ttk.Button(btn_frame, text="SG", command=apply_sg)
+sg_btn.pack(side=tk.LEFT, padx=(0, 8))
+
+run_btn = ttk.Button(btn_frame, text="Run Macro", command=run_macro)
+run_btn.pack(side=tk.LEFT)
 
 # Status
 status_var = tk.StringVar(value="Paste values above, then click Run.")
