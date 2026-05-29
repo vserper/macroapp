@@ -1,10 +1,42 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import pyautogui
 import time
 import threading
+import urllib.request
+import os
+import sys
+import subprocess
+
+VERSION = "1.1.0"
+GITHUB_RAW_URL = "https://raw.githubusercontent.com/vserper/macroapp/main/macro.py"
 
 pyautogui.PAUSE = 0.05
+
+def check_for_updates():
+    try:
+        with urllib.request.urlopen(GITHUB_RAW_URL, timeout=5) as response:
+            remote_content = response.read().decode("utf-8")
+        remote_version = None
+        for line in remote_content.splitlines():
+            if line.startswith("VERSION ="):
+                remote_version = line.split("=")[1].strip().strip('"').strip("'")
+                break
+        if remote_version and remote_version != VERSION:
+            answer = messagebox.askyesno(
+                "Update Available",
+                f"A new version ({remote_version}) is available.\nYou have {VERSION}.\n\nUpdate now?"
+            )
+            if answer:
+                script_path = os.path.abspath(__file__)
+                with open(script_path, "w", encoding="utf-8") as f:
+                    f.write(remote_content)
+                messagebox.showinfo("Updated", "Update complete! The app will now restart.")
+                subprocess.Popen([sys.executable, script_path])
+                root.destroy()
+                sys.exit()
+    except Exception:
+        pass  # No internet or GitHub unavailable — silently continue
 
 def run_macro():
     raw = text_input.get("1.0", tk.END)
@@ -35,34 +67,6 @@ def run_macro():
         run_btn.config(state=tk.NORMAL)
 
     threading.Thread(target=do_typing, daemon=True).start()
-
-root = tk.Tk()
-root.title("Form Macro")
-root.resizable(True, True)
-
-frame = ttk.Frame(root, padding=12)
-frame.grid(sticky="nsew")
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
-frame.columnconfigure(1, weight=1)
-
-# Input
-ttk.Label(frame, text="Values (one per line):").grid(row=0, column=0, columnspan=2, sticky="w")
-text_input = tk.Text(frame, height=15, width=40)
-text_input.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(4, 8))
-frame.rowconfigure(1, weight=1)
-
-# Separator key
-ttk.Label(frame, text="Key between fields:").grid(row=2, column=0, sticky="w")
-separator_var = tk.StringVar(value="Tab")
-sep_menu = ttk.Combobox(frame, textvariable=separator_var, values=["Tab", "Enter", "Tab+Enter"], state="readonly", width=14)
-sep_menu.grid(row=2, column=1, sticky="w", padx=(4, 0))
-
-# Delay
-ttk.Label(frame, text="Start delay (seconds):").grid(row=3, column=0, sticky="w", pady=(6, 0))
-delay_var = tk.IntVar(value=3)
-delay_spin = ttk.Spinbox(frame, from_=1, to=30, textvariable=delay_var, width=5)
-delay_spin.grid(row=3, column=1, sticky="w", padx=(4, 0), pady=(6, 0))
 
 def apply_drop_ships():
     raw = text_input.get("1.0", tk.END)
@@ -124,6 +128,34 @@ def apply_sg():
     text_input.delete("1.0", tk.END)
     text_input.insert("1.0", "\n".join(result))
 
+root = tk.Tk()
+root.title(f"Form Macro v{VERSION}")
+root.resizable(True, True)
+
+frame = ttk.Frame(root, padding=12)
+frame.grid(sticky="nsew")
+root.columnconfigure(0, weight=1)
+root.rowconfigure(0, weight=1)
+frame.columnconfigure(1, weight=1)
+
+# Input
+ttk.Label(frame, text="Values (one per line):").grid(row=0, column=0, columnspan=2, sticky="w")
+text_input = tk.Text(frame, height=15, width=40)
+text_input.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(4, 8))
+frame.rowconfigure(1, weight=1)
+
+# Separator key
+ttk.Label(frame, text="Key between fields:").grid(row=2, column=0, sticky="w")
+separator_var = tk.StringVar(value="Tab")
+sep_menu = ttk.Combobox(frame, textvariable=separator_var, values=["Tab", "Enter", "Tab+Enter"], state="readonly", width=14)
+sep_menu.grid(row=2, column=1, sticky="w", padx=(4, 0))
+
+# Delay
+ttk.Label(frame, text="Start delay (seconds):").grid(row=3, column=0, sticky="w", pady=(6, 0))
+delay_var = tk.IntVar(value=3)
+delay_spin = ttk.Spinbox(frame, from_=1, to=30, textvariable=delay_var, width=5)
+delay_spin.grid(row=3, column=1, sticky="w", padx=(4, 0), pady=(6, 0))
+
 # Buttons row
 btn_frame = ttk.Frame(frame)
 btn_frame.grid(row=4, column=0, columnspan=2, pady=(10, 4))
@@ -140,5 +172,8 @@ run_btn.pack(side=tk.LEFT)
 # Status
 status_var = tk.StringVar(value="Paste values above, then click Run.")
 ttk.Label(frame, textvariable=status_var, foreground="gray").grid(row=5, column=0, columnspan=2)
+
+# Check for updates in background so it doesn't slow down startup
+threading.Thread(target=check_for_updates, daemon=True).start()
 
 root.mainloop()
