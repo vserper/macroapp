@@ -4,17 +4,15 @@ A form automation tool with Drop Ships and SG transformations.
 
 ## Download
 
-[⬇️ Click here to download macro.py](https://github.com/vserper/macroapp/raw/main/macro.py)
+[⬇️ Click here to download macroapp.exe](https://github.com/vserper/macroapp/releases/latest/download/macroapp.exe)
 
-## Requirements
+Just double-click to run — no Python or installation required.
+The app checks for updates automatically every time it launches.
 
-- Python 3
-- pyautogui (`pip install pyautogui`)
+## For developers (running from source)
 
-## Running
+Requirements: Python 3, pyautogui (`pip install pyautogui`)
 
 ```
 python macro.py
 ```
-
-The app will automatically check for updates each time it launches.

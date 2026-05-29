@@ -4,37 +4,67 @@ import pyautogui
 import time
 import threading
 import urllib.request
+import json
 import os
 import sys
 import subprocess
+import tempfile
 
 VERSION = "1.1.0"
-GITHUB_RAW_URL = "https://raw.githubusercontent.com/vserper/macroapp/main/macro.py"
+GITHUB_API_URL = "https://api.github.com/repos/vserper/macroapp/releases/latest"
 
 pyautogui.PAUSE = 0.05
 
 def check_for_updates():
     try:
-        with urllib.request.urlopen(GITHUB_RAW_URL, timeout=5) as response:
-            remote_content = response.read().decode("utf-8")
-        remote_version = None
-        for line in remote_content.splitlines():
-            if line.startswith("VERSION ="):
-                remote_version = line.split("=")[1].strip().strip('"').strip("'")
+        req = urllib.request.Request(GITHUB_API_URL, headers={"User-Agent": "macroapp-updater"})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            data = json.loads(response.read().decode("utf-8"))
+
+        remote_version = data["tag_name"].lstrip("v")
+        if remote_version == VERSION:
+            return
+
+        # Find .exe asset in the release
+        exe_url = None
+        for asset in data.get("assets", []):
+            if asset["name"].endswith(".exe"):
+                exe_url = asset["browser_download_url"]
                 break
-        if remote_version and remote_version != VERSION:
-            answer = messagebox.askyesno(
-                "Update Available",
-                f"A new version ({remote_version}) is available.\nYou have {VERSION}.\n\nUpdate now?"
-            )
-            if answer:
-                script_path = os.path.abspath(__file__)
-                with open(script_path, "w", encoding="utf-8") as f:
-                    f.write(remote_content)
-                messagebox.showinfo("Updated", "Update complete! The app will now restart.")
-                subprocess.Popen([sys.executable, script_path])
-                root.destroy()
-                sys.exit()
+
+        if not exe_url:
+            return
+
+        answer = messagebox.askyesno(
+            "Update Available",
+            f"A new version ({remote_version}) is available.\nYou have v{VERSION}.\n\nUpdate now?"
+        )
+        if not answer:
+            return
+
+        status_var.set("Downloading update...")
+
+        current_path = sys.executable if getattr(sys, "frozen", False) else os.path.abspath(__file__)
+        new_path = current_path + ".new"
+        urllib.request.urlretrieve(exe_url, new_path)
+
+        # Batch script: wait for this process to exit, swap files, relaunch
+        batch = (
+            f'@echo off\n'
+            f'timeout /t 2 /nobreak > nul\n'
+            f'move /y "{new_path}" "{current_path}"\n'
+            f'start "" "{current_path}"\n'
+            f'del "%~f0"\n'
+        )
+        batch_path = os.path.join(tempfile.gettempdir(), "macroapp_update.bat")
+        with open(batch_path, "w") as f:
+            f.write(batch)
+
+        subprocess.Popen(["cmd", "/c", batch_path], creationflags=subprocess.CREATE_NO_WINDOW)
+        messagebox.showinfo("Updated", "Update downloaded! The app will restart.")
+        root.destroy()
+        sys.exit()
+
     except Exception:
         pass  # No internet or GitHub unavailable — silently continue
 
