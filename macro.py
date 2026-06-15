@@ -144,19 +144,27 @@ def apply_drop_ships():
     text_input.insert("1.0", "\n".join(results))
 
 def apply_sg():
-    raw = text_input.get("1.0", tk.END)
-    lines = raw.splitlines()
-    result = []
-    for line in lines:
-        if "\t" in line:
-            parts = line.split("\t")
-            if len(parts) >= 2 and not parts[1].startswith("SG"):
-                parts[1] = "SG" + parts[1]
-            result.append("\t".join(parts))
-        else:
-            result.append(line)
-    text_input.delete("1.0", tk.END)
-    text_input.insert("1.0", "\n".join(result))
+    try:
+        raw = text_input.get("1.0", tk.END)
+        lines = raw.splitlines()
+        tabs_found = any("\t" in line for line in lines if line.strip())
+        if not tabs_found:
+            status_var.set("SG: no tab-separated data found — is the data copied from a spreadsheet?")
+            return
+        result = []
+        for line in lines:
+            if "\t" in line:
+                parts = line.split("\t")
+                if len(parts) >= 2 and not parts[1].startswith("SG"):
+                    parts[1] = "SG" + parts[1]
+                result.append("\t".join(parts))
+            else:
+                result.append(line)
+        text_input.delete("1.0", tk.END)
+        text_input.insert("1.0", "\n".join(result))
+        status_var.set("SG applied.")
+    except Exception as e:
+        status_var.set(f"SG error: {e}")
 
 root = tk.Tk()
 root.title(f"Form Macro v{VERSION}")
