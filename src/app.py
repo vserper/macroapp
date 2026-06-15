@@ -1,11 +1,11 @@
 from flask import Flask, render_template
-import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
-BASE_PATH = os.getenv("BASE_PATH", "").rstrip("/")
 
 
-@app.route(BASE_PATH + "/")
 @app.route("/")
 def index():
     return render_template("index.html")
