@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy.pem
+          chmod 600 ~/.ssh/deploy.pem
+          ssh-keyscan -H 35.175.152.220 >> ~/.ssh/known_hosts
+
+      - name: Sync source files
+        run: |
+          rsync -avz --delete \
+            --exclude=.env \
+            -e "ssh -i ~/.ssh/deploy.pem" \
+            src/ \
+            ubuntu@35.175.152.220:/home/ubuntu/webapps/kpmmacro/src/
+
+      - name: Ensure BASE_PATH in server .env
+        run: |
+          ssh -i ~/.ssh/deploy.pem ubuntu@35.175.152.220 \
+            "grep -q 'BASE_PATH=' /home/ubuntu/webapps/kpmmacro/src/.env 2>/dev/null \
+             || echo 'BASE_PATH=/kpmmacro' >> /home/ubuntu/webapps/kpmmacro/src/.env"
+
+      - name: Rebuild and restart container
+        run: |
+          ssh -i ~/.ssh/deploy.pem ubuntu@35.175.152.220 "cd ~/webapps && ./deploy-webapp.sh kpmmacro"

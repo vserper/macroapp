@@ -53,6 +53,7 @@ Thumbs.db
 # Env files
 .env
 .env.*
+!.env.example
 
 # PyInstaller
 dist/
