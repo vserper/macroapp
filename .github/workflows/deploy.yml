@@ -17,11 +17,12 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy.pem
           chmod 600 ~/.ssh/deploy.pem
-          ssh-keyscan -H 35.175.152.220 >> ~/.ssh/known_hosts
+          echo "sgtm.ombwarehouse.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA5NyxhtDlP66LdDsn06m12jRjALz5SXEODLwTNiFM+9" >> ~/.ssh/known_hosts
+          echo "13.218.19.210 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIA5NyxhtDlP66LdDsn06m12jRjALz5SXEODLwTNiFM+9" >> ~/.ssh/known_hosts
 
       - name: Create app directory on server
         run: |
-          ssh -i ~/.ssh/deploy.pem ubuntu@35.175.152.220 "mkdir -p /home/ubuntu/webapps/macro/src"
+          ssh -i ~/.ssh/deploy.pem ubuntu@sgtm.ombwarehouse.com "mkdir -p /home/ubuntu/webapps/macro/src"
 
       - name: Sync source files
         run: |
@@ -29,14 +30,14 @@ jobs:
             --exclude=.env \
             -e "ssh -i ~/.ssh/deploy.pem" \
             src/ \
-            ubuntu@35.175.152.220:/home/ubuntu/webapps/macro/src/
+            ubuntu@sgtm.ombwarehouse.com:/home/ubuntu/webapps/macro/src/
 
       - name: Ensure BASE_PATH in server .env
         run: |
-          ssh -i ~/.ssh/deploy.pem ubuntu@35.175.152.220 \
+          ssh -i ~/.ssh/deploy.pem ubuntu@sgtm.ombwarehouse.com \
             "grep -q 'BASE_PATH=' /home/ubuntu/webapps/macro/src/.env 2>/dev/null \
              || echo 'BASE_PATH=/macro' >> /home/ubuntu/webapps/macro/src/.env"
 
       - name: Rebuild and restart container
         run: |
-          ssh -i ~/.ssh/deploy.pem ubuntu@35.175.152.220 "cd ~/webapps && ./deploy-webapp.sh macro"
+          ssh -i ~/.ssh/deploy.pem ubuntu@sgtm.ombwarehouse.com "cd ~/webapps && ./deploy-webapp.sh macro"
