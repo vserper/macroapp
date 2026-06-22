@@ -41,3 +41,7 @@ jobs:
       - name: Rebuild and restart container
         run: |
           ssh -i ~/.ssh/deploy.pem ubuntu@sgtm.ombwarehouse.com "cd ~/webapps && ./deploy-webapp.sh macro"
+
+      - name: Reload app code (restart container)
+        run: |
+          ssh -i ~/.ssh/deploy.pem ubuntu@sgtm.ombwarehouse.com "cd ~/webapps/macro && docker compose restart"
